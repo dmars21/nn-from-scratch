@@ -2,99 +2,112 @@ import math
 import random
 
 # -----------------------
-# Funzione sigmoid
+# Softmax
 # -----------------------
 
-def sigmoid(x):
-    return 1 / (1 + math.exp(-x))
-
-def sigmoid_derivative(x):
-    s = sigmoid(x)
-    return s * (1 - s) 
+def softmax(z):
+    exp_values = [math.exp(i) for i in z]
+    total = sum(exp_values)
+    return [i / total for i in exp_values]
 
 # -----------------------
-# Classe neurone singolo
+# Classe classificatore
 # -----------------------
 
-class SingleNeuron:
+class MulticlassNeuron:
 
     def __init__(self, lr=0.1):
-        self.w1 = random.random()
-        self.w2 = random.random()
-        self.b = random.random()
+        # 3 neuroni di output, ognuno con 2 pesi
+        self.weights = [
+            [random.random(), random.random()],
+            [random.random(), random.random()],
+            [random.random(), random.random()]
+        ]
+        self.biases = [random.random(), random.random(), random.random()]
         self.learning_rate = lr
 
-    def compute_loss(self, output, target):
-        #Loss utilizzata -> Mean Squared Error
-        self.loss = (output - target) ** 2
-
-        #Derivata loss rispetto output
-        self.d_loss_d_output = 2 * (output - target)
-
-    # Forward propagation
+    # Forward
     def forward(self, x1, x2):
-        self.z = self.w1 * x1 + self.w2 * x2 + self.b
-        self.output = sigmoid(self.z)
+        self.inputs = [x1, x2]
+
+        self.z = []
+        for i in range(3):
+            z_i = (
+                self.weights[i][0] * x1 +
+                self.weights[i][1] * x2 +
+                self.biases[i]
+            )
+            self.z.append(z_i)
+
+        self.output = softmax(self.z)
         return self.output
 
-    # Backward propagation
-    def backward(self, x1, x2, target):
-        self.compute_loss(self.output, target)
+    # Backward (cross-entropy + softmax)
+    def backward(self, target):
+        # target è one-hot, es: [1,0,0]
 
-        #Derivata output rispetto z
-        d_output_d_z = sigmoid_derivative(self.z)
+        self.loss = 0
+        for i in range(3):
+            # Cross-entropy loss
+            self.loss += target[i] * math.log(self.output[i] + 1e-9)
 
-        #Chain rule
-        d_loss_d_z = self.d_loss_d_output * d_output_d_z
+            # Derivata combinata softmax + cross entropy
+            d_loss_d_z = self.output[i] - target[i]
 
-        #Derivate rispetto ai pesi
-        d_loss_d_w1 = d_loss_d_z * x1
-        d_loss_d_w2 = d_loss_d_z * x2
-        d_loss_d_b = d_loss_d_z
+            # Aggiornamento pesi
+            self.weights[i][0] -= self.learning_rate * d_loss_d_z * self.inputs[0]
+            self.weights[i][1] -= self.learning_rate * d_loss_d_z * self.inputs[1]
 
-        # Aggiornamento pesi
-        self.w1 -= self.learning_rate * d_loss_d_w1
-        self.w2 -= self.learning_rate * d_loss_d_w2
-        self.b -= self.learning_rate * d_loss_d_b
-
-        return self.loss
+            # Aggiornamento bias
+            self.biases[i] -= self.learning_rate * d_loss_d_z
+        
+        self.loss *= -1
 
     # Training
     def train(self, data, epochs):
         for epoch in range(epochs):
             total_loss = 0
+
             for x1, x2, target in data:
                 self.forward(x1, x2)
-                self.backward(x1, x2, target)
+                self.backward(target)
+                
                 total_loss += self.loss
-
+                
             if epoch % 1000 == 0:
-                print(f"Epoch {epoch}: loss -> {total_loss}")
+                print(f"Epoch {epoch} - Loss: {total_loss:.4f}")
 
 # -----------------------
-# Dataset funzione logica AND
+# Dataset esempio (3 classi)
 # -----------------------
+# Classe 0 → vicino (0,0)
+# Classe 1 → vicino (1,0)
+# Classe 2 → vicino (0,1)
 
 training_data = [
-    (0, 0, 0),
-    (0, 1, 0),
-    (1, 0, 0),
-    (1, 1, 1),
+    (0, 0, [1,0,0]),
+    (0.1, 0.2, [1,0,0]),
+
+    (1, 0, [0,1,0]),
+    (0.9, 0.2, [0,1,0]),
+
+    (0, 1, [0,0,1]),
+    (0.2, 0.9, [0,0,1]),
 ]
 
 # -----------------------
-# Creazione e training
+# Training
 # -----------------------
 
-neuron = SingleNeuron()
-neuron.train(training_data, epochs=10000)
+model = MulticlassNeuron()
+model.train(training_data, epochs=10000)
 
 # -----------------------
 # Inference
 # -----------------------
 
 print("\nInference:")
-for x1, x2, _ in training_data:
-    output = neuron.forward(x1, x2)
-    output_bin = round(output)
-    print(f"{x1}, {x2} -> {output_bin} [{output:.4f}]")
+for x1, x2, target in training_data:
+    probs = model.forward(x1, x2)
+    predicted_class = probs.index(max(probs))
+    print(f"{x1}, {x2} -> Classe {predicted_class}  Prob: {probs}")
