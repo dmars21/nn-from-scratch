@@ -66,7 +66,7 @@ class BinaryNeuron:
                 total_loss += self.loss
 
             if epoch % 1000 == 0:
-                print(f"Epoch {epoch}: loss -> {total_loss}")
+                print(f"Epoch {epoch} - Loss: {total_loss}")
 
 # -----------------------
 # Dataset funzione logica AND
