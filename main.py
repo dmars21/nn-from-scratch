@@ -16,20 +16,13 @@ def sigmoid_derivative(x):
 # Classe neurone singolo
 # -----------------------
 
-class SingleNeuron:
+class BinaryNeuron:
 
     def __init__(self, lr=0.1):
         self.w1 = random.random()
         self.w2 = random.random()
         self.b = random.random()
         self.learning_rate = lr
-
-    def compute_loss(self, output, target):
-        #Loss utilizzata -> Mean Squared Error
-        self.loss = (output - target) ** 2
-
-        #Derivata loss rispetto output
-        self.d_loss_d_output = 2 * (output - target)
 
     # Forward propagation
     def forward(self, x1, x2):
@@ -39,7 +32,11 @@ class SingleNeuron:
 
     # Backward propagation
     def backward(self, x1, x2, target):
-        self.compute_loss(self.output, target)
+        #Loss utilizzata -> Mean Squared Error
+        self.loss = (self.output - target) ** 2
+
+        #Derivata loss rispetto output
+        self.d_loss_d_output = 2 * (self.output - target)
 
         #Derivata output rispetto z
         d_output_d_z = sigmoid_derivative(self.z)
@@ -86,7 +83,7 @@ training_data = [
 # Creazione e training
 # -----------------------
 
-neuron = SingleNeuron()
+neuron = BinaryNeuron()
 neuron.train(training_data, epochs=10000)
 
 # -----------------------
